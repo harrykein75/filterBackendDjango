@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Point List</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <style>
+        /* Add your custom CSS styles here */
+    </style>
+</head>
+<!--<body>
+    {% if points %}
+    <h1>Point List</h1>
+    <ul>
+        {% for point in points %}
+        <a href="{% url 'main:detail' point.id %}">
+            <li>
+                <strong>Location:</strong> {{ point.location }} |
+                <strong>Address:</strong> {{ point.address }} |
+                <strong>User:</strong> {{ point.user }} |
+                <strong>Latitude:</strong> {{ point.latitude }} |
+                <strong>Longitude:</strong> {{ point.longitude }} |
+                <strong>Visible:</strong> {{ point.visible }} |
+                <strong>Date:</strong> {{ point.date }}
+            </li>
+        </a>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No points are available.</p>
+    {% endif %}
+
+    <form id="searchForm">
+        <input type="text" id="searchInput" name="search" placeholder="Search...">
+        <button type="submit">Search</button>
+    </form>
+    <div id="searchResults"></div>
+    <hr>
+    <button id="orderButton">Order Alphabetically</button>
+
+    <h1>Data Display</h1>
+    <ul id="paginatedDataList"></ul>
+    <div id="pagination">
+        <div id="paginationButtons">
+            <button id="prevButton">Previous</button>
+            <span id="pageIndicators"></span>
+            <button id="nextButton">Next</button>
+        </div>
+        <div id="gotoPage">
+            <input type="number" id="pageNumberInput" min="1">
+            <button id="goButton">Go</button>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            $('#searchForm').submit(function(event) {
+                event.preventDefault(); // Prevent the default form submission
+        
+                // Get the search query
+                var query = $('#searchInput').val();
+        
+                // Send AJAX request to Django backend
+                $.ajax({
+                    type: 'GET',
+                    url: 'search/',  // URL to your Django view
+                    data: {
+                        'query': query
+                    },
+                    success: function(response) {
+                        // Handle successful response
+                        displayResults(response);
+                    },
+                    error: function(xhr, errmsg, err) {
+                        // Handle error
+                        console.log(errmsg);
+                    }
+                });
+            });
+        
+            function displayResults(results) {
+                // Update the UI to display search results
+                var searchResultsDiv = $('#searchResults');
+                searchResultsDiv.empty(); // Clear previous results
+        
+                // Loop through the results and display them
+                for (var i = 0; i < results.length; i++) {
+                    searchResultsDiv.append('<p>' + results[i].name + '</p>');
+                }
+            }
+
+            $('#orderButton').click(function() {
+                $.ajax({
+                    url: 'order_data/',  // URL to your Django view
+                    type: 'GET',
+                    success: function(data) {
+                        $('#dataList').empty();  // Clear previous data
+                        $.each(data, function(index, item) {
+                            $('#dataList').append('<li>' + item.name + '</li>');
+                        });
+                    },
+                    error: function(xhr, errmsg, err) {
+                        console.log(errmsg);
+                    }
+                });
+            });
+
+            // Pagination
+            var currentPage = 1;
+            var totalPages;
+
+            // Function to fetch data for the specified page
+            function fetchData(pageNumber) {
+                $.ajax({
+                    url: 'get_data/',
+                    type: 'GET',
+                    data: {'page': pageNumber},
+                    success: function(data) {
+                        $('#paginatedDataList').empty();
+                        $.each(data.results, function(index, item) {
+                            $('#paginatedDataList').append('<li>' + item.location + ' | ' + item.address + ' | ' + item.latitude + ' | ' + item.longitude + '</li>');
+                        });
+
+                        // Update pagination buttons
+                        totalPages = data.total_pages;
+                        updatePaginationButtons(pageNumber, totalPages);
+                    },
+                    error: function(xhr, errmsg, err) {
+                        console.log(errmsg);
+                    }
+                });
+            }
+
+            // Function to update pagination buttons
+            function updatePaginationButtons(currentPage, totalPages) {
+                $('#pageIndicators').empty();
+                
+                // Add ellipsis if there are more pages before the first indicator
+                if (currentPage > 2) {
+                    $('#pageIndicators').append('<button class="pageButton" data-page="' + 1 + '">' + 1 + '</button>');
+                    if (currentPage > 3) {
+                        $('#pageIndicators').append('<span class="ellipsis">...</span>');
+                    }
+                }
+
+                // Add up to 3 page indicator buttons
+                for (var i = Math.max(1, parseInt(currentPage) - 1); i <= Math.min(totalPages, parseInt(currentPage) + 1); i++) {
+                    $('#pageIndicators').append('<button class="pageButton" data-page="' + i + '">' + i + '</button>');
+                }
+
+                // Add ellipsis if there are more pages after the last indicator
+                if (totalPages - currentPage > 1) {
+                    if (totalPages - currentPage > 2) {
+                        $('#pageIndicators').append('<span class="ellipsis">...</span>');
+                    }
+                    $('#pageIndicators').append('<button class="pageButton" data-page="' + totalPages + '">' + totalPages + '</button>');
+                }
+
+                // Highlight the current page button
+                $('.pageButton[data-page="' + currentPage + '"]').addClass('active');
+            }
+
+            // Initial data fetch
+            fetchData(currentPage);
+
+            // Pagination button click event
+            $(document).on('click', '.pageButton', function() {
+                currentPage = $(this).data('page');
+                fetchData(currentPage);
+            });
+
+            $('#prevButton').click(function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    fetchData(currentPage);
+                }
+            });
+
+            $('#nextButton').click(function() {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    fetchData(currentPage);
+                }
+            });
+
+            // Go button click event
+            $('#goButton').click(function() {
+                var pageNumber = $('#pageNumberInput').val();
+                if (pageNumber >= 1 && pageNumber <= totalPages) {
+                    currentPage = parseInt(pageNumber);
+                    fetchData(currentPage);
+                } else {
+                    alert('Invalid page number');
+                }
+            });
+        });
+    </script>
+</body>-->
+<body>
+    {% if points %}
+    <h1>Point List</h1>
+    <ul>
+        {% for point in points %}
+        <a href="{% url 'main:detail' point.id %}">
+            <li>
+                <strong>Location:</strong> {{ point.location }} |
+                <strong>Address:</strong> {{ point.address }} |
+                <strong>User:</strong> {{ point.user }} |
+                <strong>Latitude:</strong> {{ point.latitude }} |
+                <strong>Longitude:</strong> {{ point.longitude }} |
+                <strong>Visible:</strong> {{ point.visible }} |
+                <strong>Date:</strong> {{ point.date }}
+            </li>
+        </a>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No points are available.</p>
+    {% endif %}
+
+    <form id="searchForm">
+        <input type="text" id="searchInput" name="search" placeholder="Search...">
+        <button type="submit">Search</button>
+    </form>
+    <div id="searchResults"></div>
+    <button id="orderButton">Order Alphabetically</button>
+
+    <h1>Data Display</h1>
+    <ul id="paginatedDataList"></ul>
+    <div id="pagination">
+        <div id="paginationButtons">
+            <button id="prevButton">Previous</button>
+            <span id="pageIndicators"></span>
+            <button id="nextButton">Next</button>
+        </div>
+        <div id="gotoPage">
+            <input type="number" id="pageNumberInput" min="1">
+            <button id="goButton">Go</button>
+        </div>
+    </div>
+
+    <h1>Data Filtering</h1>
+    <label for="fromInput">From:</label>
+    <input type="number" id="fromInput" name="fromInput" min="0" max="100">
+    <label for="toInput">To:</label>
+    <input type="number" id="toInput" name="toInput" min="0" max="100">
+    <button id="filterBtn">Filter</button>
+    <div id="filteredData">
+        <!-- Filtered data will be displayed here -->
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            $('#filterBtn').click(function() {
+                var from = $('#fromInput').val();
+                var to = $('#toInput').val();
+                /*$.ajax({
+                    url: '/filter/',
+                    type: 'GET',
+                    data: {
+                        'from': from,
+                        'to': to
+                    },
+                    success: function(response) {
+                        $('#filteredData').html(response);
+                    }
+                });*/
+                $('#filteredData').html(from+'~'+to);
+            });
+
+            var ordering = ''; // Add ordering logic here
+            function fetchData(pageNumber) {
+                console.log('ordering:',ordering)
+                var query = $('#searchInput').val();
+
+                $.ajax({
+                    url: 'get_data/',
+                    type: 'GET',
+                    data: {
+                        'page': pageNumber,
+                        'search': query,
+                        'ordering': ordering
+                    },
+                    success: function(data) {
+                        $('#paginatedDataList').empty();
+                        $.each(data.results, function(index, item) {
+                            $('#paginatedDataList').append('<li>' + item.location + ' | ' + item.address + ' | ' + item.latitude + ' | ' + item.longitude + '</li>');
+                        });
+
+                        // Update pagination buttons
+                        totalPages = data.total_pages;
+                        updatePaginationButtons(pageNumber, totalPages);
+                    },
+                    error: function(xhr, errmsg, err) {
+                        console.log(errmsg);
+                    }
+                });
+            }
+
+            function updatePaginationButtons(currentPage, totalPages) {
+                $('#pageIndicators').empty();
+                
+                // Add ellipsis if there are more pages before the first indicator
+                if (currentPage > 2) {
+                    $('#pageIndicators').append('<button class="pageButton" data-page="' + 1 + '">' + 1 + '</button>');
+                    if (currentPage > 3) {
+                        $('#pageIndicators').append('<span class="ellipsis">...</span>');
+                    }
+                }
+
+                // Add up to 3 page indicator buttons
+                for (var i = Math.max(1, parseInt(currentPage) - 1); i <= Math.min(totalPages, parseInt(currentPage) + 1); i++) {
+                    $('#pageIndicators').append('<button class="pageButton" data-page="' + i + '">' + i + '</button>');
+                }
+
+                // Add ellipsis if there are more pages after the last indicator
+                if (totalPages - currentPage > 1) {
+                    if (totalPages - currentPage > 2) {
+                        $('#pageIndicators').append('<span class="ellipsis">...</span>');
+                    }
+                    $('#pageIndicators').append('<button class="pageButton" data-page="' + totalPages + '">' + totalPages + '</button>');
+                }
+
+                // Highlight the current page button
+                $('.pageButton[data-page="' + currentPage + '"]').addClass('active');
+            }
+
+            // Initial data fetch
+            fetchData(1);
+
+            // Pagination button click event
+            $(document).on('click', '.pageButton', function() {
+                var currentPage = $(this).data('page');
+                fetchData(currentPage);
+            });
+
+            $('#prevButton').click(function() {
+                var currentPage = parseInt($('#pageIndicators .active').data('page'));
+                if (currentPage > 1) {
+                    fetchData(currentPage - 1);
+                }
+            });
+
+            $('#nextButton').click(function() {
+                var currentPage = parseInt($('#pageIndicators .active').data('page'));
+                var totalPages = parseInt($('#pageIndicators button:last').data('page'));
+                if (currentPage < totalPages) {
+                    fetchData(currentPage + 1);
+                }
+            });
+
+            // Go button click event
+            $('#goButton').click(function() {
+                var pageNumber = $('#pageNumberInput').val();
+                var totalPages = parseInt($('#pageIndicators button:last').data('page'));
+                if (pageNumber >= 1 && pageNumber <= totalPages) {
+                    fetchData(parseInt(pageNumber));
+                } else {
+                    alert('Invalid page number');
+                }
+            });
+
+            // Search form submit event
+            $('#searchForm').submit(function(event) {
+                event.preventDefault();
+                fetchData(1); // Trigger search when form is submitted
+            });
+
+            // Order button click event
+            $('#orderButton').click(function() {
+                // Add ordering logic here
+                ordering = 'address'
+                fetchData(1); // Trigger ordering when button is clicked
+            });
+        });
+    </script>
+</body>
+</html>

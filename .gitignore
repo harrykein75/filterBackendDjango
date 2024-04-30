@@ -1,0 +1,6 @@
+*.pyc
+settings.py
+*.wsgi.py
+/__pycache__/
+/migrations/
+*~
