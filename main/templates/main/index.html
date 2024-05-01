@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,198 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Point List</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="{% static "css/style.css" %}">
     <style>
         /* Add your custom CSS styles here */
     </style>
 </head>
-<!--<body>
-    {% if points %}
-    <h1>Point List</h1>
-    <ul>
-        {% for point in points %}
-        <a href="{% url 'main:detail' point.id %}">
-            <li>
-                <strong>Location:</strong> {{ point.location }} |
-                <strong>Address:</strong> {{ point.address }} |
-                <strong>User:</strong> {{ point.user }} |
-                <strong>Latitude:</strong> {{ point.latitude }} |
-                <strong>Longitude:</strong> {{ point.longitude }} |
-                <strong>Visible:</strong> {{ point.visible }} |
-                <strong>Date:</strong> {{ point.date }}
-            </li>
-        </a>
-        {% endfor %}
-    </ul>
-    {% else %}
-    <p>No points are available.</p>
-    {% endif %}
-
-    <form id="searchForm">
-        <input type="text" id="searchInput" name="search" placeholder="Search...">
-        <button type="submit">Search</button>
-    </form>
-    <div id="searchResults"></div>
-    <hr>
-    <button id="orderButton">Order Alphabetically</button>
-
-    <h1>Data Display</h1>
-    <ul id="paginatedDataList"></ul>
-    <div id="pagination">
-        <div id="paginationButtons">
-            <button id="prevButton">Previous</button>
-            <span id="pageIndicators"></span>
-            <button id="nextButton">Next</button>
-        </div>
-        <div id="gotoPage">
-            <input type="number" id="pageNumberInput" min="1">
-            <button id="goButton">Go</button>
-        </div>
-    </div>
-
-    <script>
-        $(document).ready(function() {
-            $('#searchForm').submit(function(event) {
-                event.preventDefault(); // Prevent the default form submission
-        
-                // Get the search query
-                var query = $('#searchInput').val();
-        
-                // Send AJAX request to Django backend
-                $.ajax({
-                    type: 'GET',
-                    url: 'search/',  // URL to your Django view
-                    data: {
-                        'query': query
-                    },
-                    success: function(response) {
-                        // Handle successful response
-                        displayResults(response);
-                    },
-                    error: function(xhr, errmsg, err) {
-                        // Handle error
-                        console.log(errmsg);
-                    }
-                });
-            });
-        
-            function displayResults(results) {
-                // Update the UI to display search results
-                var searchResultsDiv = $('#searchResults');
-                searchResultsDiv.empty(); // Clear previous results
-        
-                // Loop through the results and display them
-                for (var i = 0; i < results.length; i++) {
-                    searchResultsDiv.append('<p>' + results[i].name + '</p>');
-                }
-            }
-
-            $('#orderButton').click(function() {
-                $.ajax({
-                    url: 'order_data/',  // URL to your Django view
-                    type: 'GET',
-                    success: function(data) {
-                        $('#dataList').empty();  // Clear previous data
-                        $.each(data, function(index, item) {
-                            $('#dataList').append('<li>' + item.name + '</li>');
-                        });
-                    },
-                    error: function(xhr, errmsg, err) {
-                        console.log(errmsg);
-                    }
-                });
-            });
-
-            // Pagination
-            var currentPage = 1;
-            var totalPages;
-
-            // Function to fetch data for the specified page
-            function fetchData(pageNumber) {
-                $.ajax({
-                    url: 'get_data/',
-                    type: 'GET',
-                    data: {'page': pageNumber},
-                    success: function(data) {
-                        $('#paginatedDataList').empty();
-                        $.each(data.results, function(index, item) {
-                            $('#paginatedDataList').append('<li>' + item.location + ' | ' + item.address + ' | ' + item.latitude + ' | ' + item.longitude + '</li>');
-                        });
-
-                        // Update pagination buttons
-                        totalPages = data.total_pages;
-                        updatePaginationButtons(pageNumber, totalPages);
-                    },
-                    error: function(xhr, errmsg, err) {
-                        console.log(errmsg);
-                    }
-                });
-            }
-
-            // Function to update pagination buttons
-            function updatePaginationButtons(currentPage, totalPages) {
-                $('#pageIndicators').empty();
-                
-                // Add ellipsis if there are more pages before the first indicator
-                if (currentPage > 2) {
-                    $('#pageIndicators').append('<button class="pageButton" data-page="' + 1 + '">' + 1 + '</button>');
-                    if (currentPage > 3) {
-                        $('#pageIndicators').append('<span class="ellipsis">...</span>');
-                    }
-                }
-
-                // Add up to 3 page indicator buttons
-                for (var i = Math.max(1, parseInt(currentPage) - 1); i <= Math.min(totalPages, parseInt(currentPage) + 1); i++) {
-                    $('#pageIndicators').append('<button class="pageButton" data-page="' + i + '">' + i + '</button>');
-                }
-
-                // Add ellipsis if there are more pages after the last indicator
-                if (totalPages - currentPage > 1) {
-                    if (totalPages - currentPage > 2) {
-                        $('#pageIndicators').append('<span class="ellipsis">...</span>');
-                    }
-                    $('#pageIndicators').append('<button class="pageButton" data-page="' + totalPages + '">' + totalPages + '</button>');
-                }
-
-                // Highlight the current page button
-                $('.pageButton[data-page="' + currentPage + '"]').addClass('active');
-            }
-
-            // Initial data fetch
-            fetchData(currentPage);
-
-            // Pagination button click event
-            $(document).on('click', '.pageButton', function() {
-                currentPage = $(this).data('page');
-                fetchData(currentPage);
-            });
-
-            $('#prevButton').click(function() {
-                if (currentPage > 1) {
-                    currentPage--;
-                    fetchData(currentPage);
-                }
-            });
-
-            $('#nextButton').click(function() {
-                if (currentPage < totalPages) {
-                    currentPage++;
-                    fetchData(currentPage);
-                }
-            });
-
-            // Go button click event
-            $('#goButton').click(function() {
-                var pageNumber = $('#pageNumberInput').val();
-                if (pageNumber >= 1 && pageNumber <= totalPages) {
-                    currentPage = parseInt(pageNumber);
-                    fetchData(currentPage);
-                } else {
-                    alert('Invalid page number');
-                }
-            });
-        });
-    </script>
-</body>-->
 <body>
     {% if points %}
     <h1>Point List</h1>
@@ -225,9 +39,22 @@
     </form>
     <div id="searchResults"></div>
     <button id="orderButton">Order Alphabetically</button>
-
+    <hr>
     <h1>Data Display</h1>
-    <ul id="paginatedDataList"></ul>
+    <table style="border: dashed;">
+        <thead>
+            <tr>
+                <th>Location</th>
+                <th>Address</th>
+                <th>User</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>Visible</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody id="paginatedDataList"></tbody>
+    </table>
     <div id="pagination">
         <div id="paginationButtons">
             <button id="prevButton">Previous</button>
@@ -239,39 +66,146 @@
             <button id="goButton">Go</button>
         </div>
     </div>
+    <hr>
+    <div style="width:500px">
+        <div class="price-input-container"> 
+            <div class="price-input"> 
+                <div class="price-field"> 
+                    <span>Minimum Bill</span> 
+                    <input type="number"
+                        class="min-input"
+                        value="30"> 
+                </div> 
+                <div class="price-field"> 
+                    <span>Maximum Bill</span> 
+                    <input type="number"
+                        class="max-input"
+                        value="70"> 
+                </div> 
+            </div> 
+            <div class="slider-container"> 
+                <div class="price-slider"> 
+                </div> 
+            </div> 
+        </div> 
 
-    <h1>Data Filtering</h1>
-    <label for="fromInput">From:</label>
-    <input type="number" id="fromInput" name="fromInput" min="0" max="100">
-    <label for="toInput">To:</label>
-    <input type="number" id="toInput" name="toInput" min="0" max="100">
-    <button id="filterBtn">Filter</button>
-    <div id="filteredData">
-        <!-- Filtered data will be displayed here -->
+        <!-- Slider -->
+        <div class="range-input"> 
+            <input type="range"
+                class="min-range"
+                min="-180"
+                max="180"
+                value="30"
+                step="10"> 
+            <input type="range"
+                class="max-range"
+                min="-180"
+                max="180"
+                value="70"
+                step="10"> 
+        </div>
+        <button id="filterBtn">Filter</button>
     </div>
 
     <script>
         $(document).ready(function() {
-            $('#filterBtn').click(function() {
-                var from = $('#fromInput').val();
-                var to = $('#toInput').val();
-                /*$.ajax({
-                    url: '/filter/',
-                    type: 'GET',
-                    data: {
-                        'from': from,
-                        'to': to
-                    },
-                    success: function(response) {
-                        $('#filteredData').html(response);
-                    }
-                });*/
-                $('#filteredData').html(from+'~'+to);
-            });
+            const rangevalue = document.querySelector(".slider-container .price-slider"); 
+            const rangeInputvalue = document.querySelectorAll(".range-input input"); 
+            let priceGap = 10; 
+            
+            // Adding event listeners to price input elements 
+            const priceInputvalue = document.querySelectorAll(".price-input input"); 
+            for (let i = 0; i < priceInputvalue.length; i++) { 
+                priceInputvalue[i].addEventListener("input", e => { 
+                    let minp = parseInt(priceInputvalue[0].value); 
+                    let maxp = parseInt(priceInputvalue[1].value); 
+                    let diff = maxp - minp 
+                    
+                    if (minp < -180) { 
+                        alert("minimum price cannot be less than -180"); 
+                        priceInputvalue[0].value = -180; 
+                        minp = -180; 
+                    } 
+                    
+                    if (maxp > 180) { 
+                        alert("maximum price cannot be greater than 180"); 
+                        priceInputvalue[1].value = 180; 
+                        maxp = 180; 
+                    } 
+                    
+                    if (minp > maxp - priceGap) { 
+                        priceInputvalue[0].value = maxp - priceGap; 
+                        minp = maxp - priceGap; 
+                        
+                        if (minp < -180) { 
+                            priceInputvalue[0].value = -180; 
+                            minp = -180; 
+                        } 
+                    } 
+                    
+                    if (diff >= priceGap && maxp <= rangeInputvalue[1].max) { 
+                        if (e.target.className === "min-input") { 
+                            rangeInputvalue[0].value = minp; 
+                            let value1 = parseInt(rangeInputvalue[0].max);
+                            rangevalue.style.left = `${((minp + 180) / (value1 + 180)) * 100}%`; 
+                        } 
+                        else { 
+                            rangeInputvalue[1].value = maxp; 
+                            let value2 = parseInt(rangeInputvalue[1].max); 
+                            rangevalue.style.right = `${100 - ((maxp + 180) / (value2 + 180)) * 100}%`; 
+                        } 
+                    } 
+                });  
+            }
+            
+            // Add event listeners to range input elements 
+            for (let i = 0; i < rangeInputvalue.length; i++) { 
+                rangeInputvalue[i].addEventListener("input", e => {
+                    let minVal = parseInt(rangeInputvalue[0].value); 
+                    let maxVal = parseInt(rangeInputvalue[1].value); 
+                    let diff = maxVal - minVal 
+                    
+                    if (diff < priceGap) { 
+                        if (e.target.className === "min-range") { 
+                            rangeInputvalue[0].value = maxVal - priceGap;
+                        } 
+                        else { 
+                            rangeInputvalue[1].value = minVal + priceGap;
+                        } 
+                    } 
+                    else { 
+                        priceInputvalue[0].value = minVal; 
+                        priceInputvalue[1].value = maxVal;
+                        rangevalue.style.left = `${((minVal + 180) / (parseInt(rangeInputvalue[0].max) + 180)) * 100}%`; 
+                        rangevalue.style.right = `${100 - ((maxVal + 180) / (parseInt(rangeInputvalue[1].max) + 180)) * 100}%`; 
+                    } 
+                }); 
+            }
+
+            let minVal = parseInt(rangeInputvalue[0].value); 
+            let maxVal = parseInt(rangeInputvalue[1].value); 
+
+            let diff = maxVal - minVal;
+
+            // Check if the price gap is exceeded 
+            if (diff < priceGap) { 
+                // Check if the input is the min range input 
+                if (e.target.className === "min-range") { 
+                    rangeInputvalue[0].value = maxVal - priceGap; 
+                } else { 
+                    rangeInputvalue[1].value = minVal + priceGap; 
+                } 
+            } else { 
+                // Update price inputs and range progress 
+                priceInputvalue[0].value = minVal; 
+                priceInputvalue[1].value = maxVal;
+                rangevalue.style.left = `${((minVal + 180) / (parseInt(rangeInputvalue[0].max) + 180)) * 100}%`; 
+                rangevalue.style.right = `${100 - ((maxVal + 180) / (parseInt(rangeInputvalue[1].max) + 180)) * 100}%`; 
+            }
 
             var ordering = ''; // Add ordering logic here
+
             function fetchData(pageNumber) {
-                console.log('ordering:',ordering)
                 var query = $('#searchInput').val();
 
                 $.ajax({
@@ -280,12 +214,14 @@
                     data: {
                         'page': pageNumber,
                         'search': query,
-                        'ordering': ordering
+                        'ordering': ordering,
+                        'from': priceInputvalue[0].value,
+                        'to': priceInputvalue[1].value
                     },
                     success: function(data) {
                         $('#paginatedDataList').empty();
                         $.each(data.results, function(index, item) {
-                            $('#paginatedDataList').append('<li>' + item.location + ' | ' + item.address + ' | ' + item.latitude + ' | ' + item.longitude + '</li>');
+                            $('#paginatedDataList').append(`<tr key="${index}"><td>${item.location}</td><td>${item.address}</td><td>${item.user}</td><td>${item.latitude}</td><td>${item.longitude}</td><td>${item.visible ? 'True': 'False'}</td><td>${item.date}</td></tr>`);
                         });
 
                         // Update pagination buttons
@@ -372,6 +308,10 @@
                 // Add ordering logic here
                 ordering = 'address'
                 fetchData(1); // Trigger ordering when button is clicked
+            });
+
+            $('#filterBtn').click(function() {
+                fetchData(1);
             });
         });
     </script>

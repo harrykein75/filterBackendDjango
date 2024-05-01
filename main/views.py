@@ -80,6 +80,12 @@ def get_data(request):
     if search_query:
         queryset = queryset.filter(Q(location__icontains=search_query) | Q(address__icontains=search_query))
 
+    # Apply "from" and "to" filtering
+    from_value = request.GET.get('from')
+    to_value = request.GET.get('to')
+    if from_value is not None and to_value is not None:
+        queryset = queryset.filter(latitude__gte=from_value, latitude__lte=to_value)
+
     # Apply ordering
     ordering = request.GET.get('ordering')
 
@@ -103,5 +109,3 @@ def get_data(request):
         'total_pages': paginator.num_pages
     }
     return JsonResponse(data)
-
-    
